@@ -2,81 +2,28 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Pokémon Collector</title>
+<title>Pokemon - Gotta Catch Em All</title>
 <style>
-body {
-  margin: 0;
-  font-family: 'Poppins', sans-serif;
-  background: linear-gradient(to bottom, #1a237e, #0d47a1);
-  color: white;
-  overflow: hidden;
-}
+body { margin:0; font-family:sans-serif; background:#111; color:white; overflow:hidden; }
 #ui {
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  background: rgba(0,0,0,0.7);
-  padding: 15px;
-  border-radius: 10px;
-  z-index: 10;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+  position:fixed; top:10px; left:10px; background:rgba(0,0,0,0.8);
+  padding:10px; border-radius:6px; z-index:10;
 }
-label {
-  display: block;
-  margin: 8px 0;
-  font-weight: bold;
-}
-input[type=number] {
-  width: 70px;
-  padding: 5px;
-  border-radius: 4px;
-  border: none;
-  outline: none;
-}
-button {
-  margin-top: 8px;
-  padding: 8px 14px;
-  cursor: pointer;
-  background: #ffcb05;
-  color: #2a75bb;
-  border: none;
-  border-radius: 6px;
-  font-weight: bold;
-  transition: 0.2s;
-}
-button:hover {
-  background: #f5b700;
-}
-canvas {
-  display: block;
-}
-
-.stats-card {
-  position: fixed;
-  bottom: 10px;
-  left: 10px;
-  background: rgba(0,0,0,0.7);
-  padding: 10px 15px;
-  border-radius: 10px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-  font-size: 14px;
-  line-height: 1.5;
-}
+label { display:block; margin:5px 0; }
+input[type=number] { width:60px; }
+button { margin-top:5px; padding:5px 10px; cursor:pointer; background:#333; color:white; border:none; border-radius:4px; }
+canvas { display:block; }
 </style>
 </head>
 <body>
 <div id="ui">
-  <label>Number of Pokémon (1–151): <input type="number" id="nPokemon" value="9" min="1" max="151" title="Number of unique Pokémon to collect"></label>
-  <label>Number of Simulations: <input type="number" id="nTrials" value="5" min="1" title="How many times to run the simulation"></label>
+  <label>Number of Pokémon (1–151): <input type="number" id="nPokemon" value="9" min="1" max="151"></label>
+  <label>Number of Simulations: <input type="number" id="nTrials" value="5"></label>
   <button id="startBtn">Start Simulation</button>
   <button id="resetBtn">Reset</button>
 </div>
 
 <canvas id="canvas"></canvas>
-
-<div class="stats-card" id="statsCard">
-  <!-- dynamic stats appear here -->
-</div>
 
 <script>
 const spriteBase = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/';
@@ -102,63 +49,64 @@ let picks = 0;
 let collected = new Set();
 let allTrials = [];
 let pokemonCounts = Array(nSprites).fill(0);
-let animationId = null;
 
 function harmonic(n) { let sum = 0; for (let i = 1; i <= n; i++) sum += 1 / i; return sum; }
 
 function init() {
   nPokemon = Math.min(Math.max(parseInt(document.getElementById('nPokemon').value) || 9, 1), 151);
   nTrials = parseInt(document.getElementById('nTrials').value) || 5;
-  trialIndex = 0;
-  picks = 0;
-  collected = new Set();
-  allTrials = [];
+  trialIndex = 0; picks = 0; collected = new Set(); allTrials = [];
   cancelAnimationFrame(animationId);
-  if (nTrials <= 10) pokemonCounts = Array(nSprites).fill(0);
+  if (nTrials <= 10) {
+    pokemonCounts = Array(nSprites).fill(0); // reset counts for small simulations
+  }
   drawBase();
 }
 
 function pickPokemon() {
   const c = Math.floor(Math.random() * nPokemon);
-  collected.add(c);
-  picks++;
+  collected.add(c); picks++;
   pokemonCounts[c]++;
 }
 
 function drawBase() {
   ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle = 'rgba(0,0,0,0.3)';
-  ctx.fillRect(0, 0, width, height);
-  drawPokemonSlots();
+  ctx.fillStyle = '#222'; ctx.fillRect(0, 0, width, height);
   drawHistogram();
-  updateStats();
+  drawInfo();
+  drawPokemonSlots();
 }
 
 function drawPokemonSlots() {
   const margin = 20;
   const maxSlotWidth = 80;
-  const columns = Math.min(nPokemon, 16);
+  const maxColumns = 19; // <-- change to 16
+  const columns = Math.min(nPokemon, maxColumns);
   const slotWidth = Math.min((width - 2 * margin) / columns, maxSlotWidth);
   const rows = Math.ceil(nPokemon / columns);
 
   for (let i = 0; i < nPokemon; i++) {
     const row = Math.floor(i / columns);
     const col = i % columns;
-    const xPos = margin + col * (slotWidth + 10);
-    const yPos = margin + row * (slotWidth + 10);
+    const xPos = width - margin - (columns - col) * slotWidth;
+    const yPos = margin + row * (slotWidth + 5);
 
-    ctx.strokeStyle = 'white';
-    ctx.lineWidth = 2;
+    // draw slot
+    ctx.strokeStyle = 'white'; ctx.lineWidth = 2;
     ctx.strokeRect(xPos, yPos, slotWidth, slotWidth);
 
+    // draw Pokémon if collected
     if (collected.has(i) || (nTrials > 10 && pokemonCounts[i] > 0)) {
       const img = sprites[i];
-      if (img.complete) ctx.drawImage(img, xPos, yPos, slotWidth, slotWidth);
+      if (img.complete) {
+        ctx.drawImage(img, xPos, yPos, slotWidth, slotWidth);
+      }
     }
 
+    // draw count in bottom-right corner
     if (pokemonCounts[i] > 0) {
       ctx.fillStyle = 'white';
-      ctx.font = `${Math.floor(slotWidth/5)}px sans-serif`;
+      ctx.font = `${Math.floor(slotWidth / 5)}px sans-serif`;
       ctx.textAlign = 'right';
       ctx.textBaseline = 'bottom';
       ctx.fillText(pokemonCounts[i], xPos + slotWidth - 2, yPos + slotWidth - 2);
@@ -166,86 +114,79 @@ function drawPokemonSlots() {
   }
 }
 
+function drawInfo() {
+  const avg = (allTrials.reduce((a, b) => a + b, 0) + picks) / (allTrials.length + (picks > 0 ? 1 : 0));
+  const expected = nPokemon * harmonic(nPokemon);
+  const xShift = 150; // same shift as histogram
+  const yShift = 100;  // move stats up by 50 pixels
+  ctx.fillStyle = 'white'; 
+  ctx.font = '14px sans-serif';
+  ctx.fillText(`Trial: ${trialIndex + 1} / ${nTrials}`, 10 + xShift, height - 140 - yShift);
+  ctx.fillText(`Picks this trial: ${picks}`, 10 + xShift, height - 120 - yShift);
+  ctx.fillText(`Running Avg Picks: ${avg.toFixed(2)}`, 10 + xShift, height - 100 - yShift);
+  ctx.fillText(`Expected Picks: ${expected.toFixed(2)}`, 10 + xShift, height - 80 - yShift);
+  ctx.fillText(`Difference: ${(avg - expected).toFixed(2)}`, 10 + xShift, height - 60 - yShift);
+}
+
 function drawHistogram() {
   const margin = 20;
-  const histHeight = 120;
-  const histY = height - 180;
-  const maxPick = Math.max(...allTrials, picks, 1);
+  const histHeight = 100;
+  const histY = height - 150;
+  const maxPick = Math.max(...allTrials, picks);
   const bins = Math.ceil(maxPick);
-  const binWidth = Math.max(4, (width - 2 * margin) / bins); // minimum width
-  const counts = Array(bins+1).fill(0);
+  const binWidth = (width - 2 * margin) / bins;
+  const counts = Array(bins + 1).fill(0);
   for (let val of allTrials) counts[val]++;
   counts[picks]++;
-  const maxCount = Math.max(...counts, 1);
+  const maxCount = Math.max(...counts);
+
+  // >>> SHIFT HISTOGRAM 60 PX TO THE RIGHT <<<
+  const xShift = 60;
 
   for (let i = 0; i < counts.length; i++) {
-    const h = counts[i]/maxCount*histHeight;
-    const gradient = ctx.createLinearGradient(0, histY + histHeight - h, 0, histY + histHeight);
-    gradient.addColorStop(0, `hsl(${i/maxPick*360},80%,70%)`);
-    gradient.addColorStop(1, `hsl(${i/maxPick*360},60%,30%)`);
-    ctx.fillStyle = gradient;
-    ctx.fillRect(margin + i*binWidth, histY + histHeight - h, binWidth*0.8, h);
+    const h = counts[i] / maxCount * histHeight;
+    ctx.fillStyle = `hsl(${i / maxPick * 360},80%,60%)`;
+    ctx.fillRect(margin + xShift + i * binWidth, histY + histHeight - h, binWidth * 0.8, h);
   }
 
   ctx.strokeStyle = 'white';
-  ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(margin, histY + histHeight);
-  ctx.lineTo(width - margin, histY + histHeight);
+  ctx.moveTo(margin + xShift, histY + histHeight);
+  ctx.lineTo(width - margin + xShift, histY + histHeight);
+  ctx.moveTo(margin + xShift, histY + histHeight);
+  ctx.lineTo(margin + xShift, histY);
   ctx.stroke();
 }
 
-function updateStats() {
-  const avg = (allTrials.reduce((a,b)=>a+b,0)+picks)/(allTrials.length + (picks>0?1:0));
-  const expected = nPokemon * harmonic(nPokemon);
-  const diff = avg - expected;
-  const card = document.getElementById('statsCard');
-  card.innerHTML = `
-    Trial: ${trialIndex+1} / ${nTrials}<br>
-    Picks this trial: ${picks}<br>
-    Running Avg Picks: ${avg.toFixed(2)}<br>
-    Expected Picks: ${expected.toFixed(2)}<br>
-    Difference: ${diff.toFixed(2)}<br>
-    Pokémon Collected: ${collected.size} / ${nPokemon}
-  `;
-}
+let animationId = null;
 
 function animate() {
   if (trialIndex < nTrials) {
     if (nTrials <= 10) {
       if (collected.size < nPokemon) {
-        pickPokemon();
-        drawBase();
-        animationId = setTimeout(animate, 300); // use setTimeout for proper cancel
+        pickPokemon(); drawBase();
+        setTimeout(() => { animationId = requestAnimationFrame(animate); }, 300);
       } else {
         allTrials.push(picks);
-        trialIndex++;
-        picks = 0;
-        collected = new Set();
-        animationId = setTimeout(animate, 300);
+        trialIndex++; picks = 0; collected = new Set();
+        setTimeout(() => { animationId = requestAnimationFrame(animate); }, 300);
       }
     } else {
       for (let t = 0; t < nTrials; t++) {
         let trialSet = new Set(), trialPicks = 0;
-        while (trialSet.size < nPokemon) {
-          trialSet.add(Math.floor(Math.random() * nPokemon));
-          trialPicks++;
-        }
+        while (trialSet.size < nPokemon) { trialSet.add(Math.floor(Math.random() * nPokemon)); trialPicks++; }
         allTrials.push(trialPicks);
         trialSet.forEach(c => pokemonCounts[c]++);
       }
       trialIndex = nTrials;
-      picks = 0;
-      collected = new Set();
+      picks = 0; collected = new Set();
       drawBase();
     }
   }
 }
 
-document.getElementById('startBtn').onclick = function(){init(); animate();};
-document.getElementById('resetBtn').onclick = function(){cancelAnimationFrame(animationId); init();};
-
-init();
+document.getElementById('startBtn').onclick = function () { init(); animate(); };
+document.getElementById('resetBtn').onclick = function () { init(); };
 </script>
 </body>
 </html>
