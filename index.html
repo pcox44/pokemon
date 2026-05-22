@@ -1,192 +1,722 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="utf-8">
-<title>Pokemon - Gotta Catch Em All</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pokémon Coupon Collector Simulator</title>
 <style>
-body { margin:0; font-family:sans-serif; background:#111; color:white; overflow:hidden; }
-#ui {
-  position:fixed; top:10px; left:10px; background:rgba(0,0,0,0.8);
-  padding:10px; border-radius:6px; z-index:10;
+:root{
+  --bg1:#06111f;
+  --bg2:#10182f;
+  --panel:rgba(10,18,34,.78);
+  --panel2:rgba(255,255,255,.08);
+  --line:rgba(255,255,255,.16);
+  --text:#f8fafc;
+  --muted:#a7b4c8;
+  --yellow:#ffcb05;
+  --blue:#2a75bb;
+  --red:#ef4444;
+  --green:#22c55e;
+  --shadow:0 18px 45px rgba(0,0,0,.38);
 }
-label { display:block; margin:5px 0; }
-input[type=number] { width:60px; }
-button { margin-top:5px; padding:5px 10px; cursor:pointer; background:#333; color:white; border:none; border-radius:4px; }
-canvas { display:block; }
+*{box-sizing:border-box}
+html,body{height:100%;}
+body{
+  margin:0;
+  font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color:var(--text);
+  background:
+    radial-gradient(circle at 10% 10%, rgba(255,203,5,.20), transparent 26%),
+    radial-gradient(circle at 90% 20%, rgba(42,117,187,.30), transparent 34%),
+    linear-gradient(135deg,var(--bg1),var(--bg2) 62%,#1d1029);
+  overflow-x:hidden;
+}
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  background-image:
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+  background-size:38px 38px;
+  mask-image:linear-gradient(to bottom, rgba(0,0,0,.9), transparent 82%);
+}
+.app{
+  width:min(1500px, calc(100vw - 28px));
+  margin:14px auto 28px;
+  display:grid;
+  grid-template-columns:minmax(320px, 420px) 1fr;
+  gap:16px;
+}
+.hero,.panel,.canvas-card,.history-card{
+  border:1px solid var(--line);
+  background:var(--panel);
+  box-shadow:var(--shadow);
+  backdrop-filter:blur(16px);
+  border-radius:24px;
+}
+.hero{
+  grid-column:1 / -1;
+  position:relative;
+  overflow:hidden;
+  padding:24px clamp(18px, 3vw, 34px);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:20px;
+}
+.hero::after{
+  content:"151";
+  position:absolute;
+  right:26px;
+  bottom:-42px;
+  font-size:150px;
+  line-height:1;
+  font-weight:950;
+  letter-spacing:-.08em;
+  color:rgba(255,203,5,.12);
+  pointer-events:none;
+}
+.hero h1{
+  margin:0;
+  font-size:clamp(2rem, 5vw, 4.4rem);
+  line-height:.93;
+  letter-spacing:-.07em;
+  text-wrap:balance;
+}
+.hero h1 span{
+  color:var(--yellow);
+  text-shadow:0 0 28px rgba(255,203,5,.42);
+}
+.hero p{
+  margin:10px 0 0;
+  max-width:780px;
+  color:var(--muted);
+  font-weight:750;
+  line-height:1.45;
+}
+.pokeball{
+  width:94px;
+  height:94px;
+  border-radius:50%;
+  border:5px solid #111827;
+  background:linear-gradient(#ef4444 0 46%, #111827 46% 54%, #f8fafc 54% 100%);
+  position:relative;
+  flex:0 0 auto;
+  box-shadow:0 0 34px rgba(239,68,68,.34), inset 0 -8px 18px rgba(0,0,0,.22);
+}
+.pokeball::after{
+  content:"";
+  position:absolute;
+  inset:50% auto auto 50%;
+  width:32px;
+  height:32px;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  background:#f8fafc;
+  border:5px solid #111827;
+}
+.panel{padding:16px; align-self:start; position:sticky; top:14px;}
+.panel h2,.history-card h2{margin:0 0 12px; font-size:1.05rem; letter-spacing:.02em;}
+.form-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+label{display:block; color:var(--muted); font-size:.83rem; font-weight:850; text-transform:uppercase; letter-spacing:.05em;}
+input,select{
+  width:100%;
+  margin-top:6px;
+  padding:10px 11px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.22);
+  background:rgba(255,255,255,.08);
+  color:var(--text);
+  font-weight:850;
+  outline:none;
+}
+input:focus,select:focus{border-color:var(--yellow); box-shadow:0 0 0 3px rgba(255,203,5,.16);}
+.controls{display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:13px;}
+button{
+  border:0;
+  border-radius:15px;
+  padding:11px 13px;
+  font-weight:950;
+  color:white;
+  cursor:pointer;
+  background:linear-gradient(135deg,#2a75bb,#1d4ed8);
+  box-shadow:0 8px 0 rgba(0,0,0,.25);
+  transition:transform .16s ease, filter .16s ease, box-shadow .16s ease;
+}
+button:hover{filter:brightness(1.09); transform:translateY(-1px);}
+button:active{transform:translateY(3px); box-shadow:0 4px 0 rgba(0,0,0,.25);}
+button.gold{background:linear-gradient(135deg,#ffcb05,#d97706); color:#172033;}
+button.red{background:linear-gradient(135deg,#ef4444,#b91c1c);}
+button.green{background:linear-gradient(135deg,#22c55e,#15803d);}
+button.slate{background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.16); color:var(--text);}
+button:disabled{opacity:.55; cursor:not-allowed; transform:none; filter:none;}
+.stats{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px;}
+.stat{
+  background:var(--panel2);
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:12px;
+  min-height:76px;
+}
+.stat .label{font-size:.74rem; color:var(--muted); font-weight:900; text-transform:uppercase; letter-spacing:.06em;}
+.stat .value{font-size:1.55rem; font-weight:950; margin-top:4px; letter-spacing:-.04em;}
+.progress-wrap{margin-top:14px; background:rgba(255,255,255,.08); border-radius:999px; height:18px; overflow:hidden; border:1px solid var(--line);}
+.progress-bar{height:100%; width:0%; background:linear-gradient(90deg,#ef4444,#ffcb05,#22c55e); transition:width .25s ease;}
+.explain{margin-top:14px; color:var(--muted); line-height:1.45; font-size:.93rem; font-weight:700;}
+.explain strong{color:var(--yellow);}
+.main{display:grid; grid-template-rows:auto auto; gap:16px; min-width:0;}
+.canvas-card{padding:12px; position:relative; overflow:hidden;}
+.canvas-toolbar{display:flex; justify-content:space-between; align-items:center; gap:12px; padding:5px 6px 12px;}
+.canvas-toolbar .title{font-weight:950; letter-spacing:-.02em;}
+.legend{display:flex; gap:12px; flex-wrap:wrap; color:var(--muted); font-size:.85rem; font-weight:850;}
+.legend i{display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:5px; vertical-align:-1px;}
+canvas{display:block; width:100%; border-radius:18px; background:rgba(2,6,23,.62);}
+#canvas{height:min(68vh, 760px); min-height:520px;}
+.bottom-grid{display:grid; grid-template-columns:1.25fr .75fr; gap:16px;}
+.history-card{padding:14px; min-width:0;}
+#histogram{height:260px;}
+.table-wrap{max-height:260px; overflow:auto; border-radius:16px; border:1px solid var(--line); background:rgba(0,0,0,.22);}
+table{width:100%; border-collapse:collapse; font-size:.9rem;}
+th,td{padding:9px 10px; border-bottom:1px solid rgba(255,255,255,.09); text-align:left;}
+th{position:sticky; top:0; background:#111827; color:var(--yellow); z-index:1;}
+tr:last-child td{border-bottom:0;}
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;
+  border-radius:999px;
+  background:rgba(255,203,5,.12);
+  border:1px solid rgba(255,203,5,.28);
+  color:#fde68a;
+  font-weight:900;
+  font-size:.8rem;
+}
+.toast{
+  position:fixed;
+  right:18px;
+  bottom:18px;
+  background:#111827;
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:11px 14px;
+  box-shadow:var(--shadow);
+  color:white;
+  opacity:0;
+  transform:translateY(10px);
+  transition:.22s ease;
+  pointer-events:none;
+  font-weight:850;
+}
+.toast.show{opacity:1; transform:translateY(0);}
+@media (max-width: 980px){
+  .app{grid-template-columns:1fr;}
+  .panel{position:relative; top:auto;}
+  .bottom-grid{grid-template-columns:1fr;}
+  #canvas{height:620px;}
+}
+@media (max-width: 640px){
+  .app{width:calc(100vw - 18px); margin:9px auto 18px;}
+  .hero{padding:18px; align-items:flex-start;}
+  .pokeball{display:none;}
+  .form-grid,.controls,.stats{grid-template-columns:1fr;}
+  #canvas{height:560px; min-height:460px;}
+  .canvas-toolbar{align-items:flex-start; flex-direction:column;}
+}
 </style>
 </head>
 <body>
-<div id="ui">
-  <label>Number of Pokémon (1–151): <input type="number" id="nPokemon" value="9" min="1" max="151"></label>
-  <label>Number of Simulations: <input type="number" id="nTrials" value="5"></label>
-  <button id="startBtn">Start Simulation</button>
-  <button id="resetBtn">Reset</button>
-</div>
+<div class="app">
+  <section class="hero">
+    <div>
+      <h1>Gotta Catch <span>’Em All</span></h1>
+      <p>A visual coupon collector simulator. Each random encounter is equally likely. How many picks does it take to collect every Pokémon in your Pokédex?</p>
+    </div>
+    <div class="pokeball" aria-hidden="true"></div>
+  </section>
 
-<canvas id="canvas"></canvas>
+  <aside class="panel">
+    <h2>Simulation Controls</h2>
+    <div class="form-grid">
+      <label>Pokémon to collect
+        <input type="number" id="nPokemon" value="9" min="1" max="151" />
+      </label>
+      <label>Number of trials
+        <input type="number" id="nTrials" value="5" min="1" max="250000" />
+      </label>
+      <label>Animation speed
+        <select id="speedMode">
+          <option value="slow">Slow</option>
+          <option value="normal" selected>Normal</option>
+          <option value="fast">Fast</option>
+          <option value="instant">Instant for large trials</option>
+        </select>
+      </label>
+      <label>Pokédex display
+        <select id="displayMode">
+          <option value="current" selected>Current trial</option>
+          <option value="counts">All-time counts</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="controls">
+      <button class="gold" id="startBtn">Start</button>
+      <button class="green" id="quickBtn">+1000 Fast</button>
+      <button class="slate" id="saveBtn">Save PNG</button>
+      <button class="red" id="resetBtn">Reset</button>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="label">Current Trial</div><div class="value" id="trialStat">0 / 0</div></div>
+      <div class="stat"><div class="label">Caught</div><div class="value" id="caughtStat">0 / 9</div></div>
+      <div class="stat"><div class="label">Running Avg</div><div class="value" id="avgStat">—</div></div>
+      <div class="stat"><div class="label">Expected</div><div class="value" id="expectedStat">—</div></div>
+      <div class="stat"><div class="label">Last Trial</div><div class="value" id="lastStat">—</div></div>
+      <div class="stat"><div class="label">Total Picks</div><div class="value" id="totalPicksStat">0</div></div>
+    </div>
+
+    <div class="progress-wrap" title="Current trial completion"><div class="progress-bar" id="progressBar"></div></div>
+
+    <p class="explain">
+      <strong>Math idea:</strong> if there are \(n\) equally likely Pokémon, the expected number of encounters to collect all of them is
+      <strong>\(nH_n=n(1+\frac12+\cdots+\frac1n)\)</strong>.
+    </p>
+  </aside>
+
+  <main class="main">
+    <section class="canvas-card">
+      <div class="canvas-toolbar">
+        <div class="title">Live Pokédex</div>
+        <div class="legend">
+          <span><i style="background:#22c55e"></i>New catch</span>
+          <span><i style="background:#64748b"></i>Duplicate</span>
+          <span class="badge" id="statusBadge">Ready</span>
+        </div>
+      </div>
+      <canvas id="canvas"></canvas>
+    </section>
+
+    <div class="bottom-grid">
+      <section class="history-card">
+        <h2>Trial Distribution</h2>
+        <canvas id="histogram"></canvas>
+      </section>
+      <section class="history-card">
+        <h2>Recent Trials</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Picks</th><th>vs Expected</th></tr></thead>
+            <tbody id="historyBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
 
 <script>
 const spriteBase = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/';
 const nSprites = 151;
 const sprites = [];
-
 for (let i = 1; i <= nSprites; i++) {
   const img = new Image();
+  img.crossOrigin = 'anonymous';
   img.src = spriteBase + i + '.png';
+  img.onload = () => draw();
   sprites.push(img);
 }
 
-const canvas = document.getElementById('canvas');
+const $ = id => document.getElementById(id);
+const canvas = $('canvas');
 const ctx = canvas.getContext('2d');
-let width, height;
-function resizeCanvas() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
+const histCanvas = $('histogram');
+const hctx = histCanvas.getContext('2d');
 
-let nPokemon = 9, nTrials = 5;
+let width = 0, height = 0;
+let nPokemon = 9;
+let nTrials = 5;
 let trialIndex = 0;
 let picks = 0;
+let totalPicks = 0;
 let collected = new Set();
 let allTrials = [];
 let pokemonCounts = Array(nSprites).fill(0);
+let recentCatch = null;
+let recentWasNew = false;
+let running = false;
+let timer = null;
 
-function harmonic(n) { let sum = 0; for (let i = 1; i <= n; i++) sum += 1 / i; return sum; }
-
-function init() {
-  nPokemon = Math.min(Math.max(parseInt(document.getElementById('nPokemon').value) || 9, 1), 151);
-  nTrials = parseInt(document.getElementById('nTrials').value) || 5;
-  trialIndex = 0; picks = 0; collected = new Set(); allTrials = [];
-  cancelAnimationFrame(animationId);
-  if (nTrials <= 10) {
-    pokemonCounts = Array(nSprites).fill(0); // reset counts for small simulations
-  }
-  drawBase();
+function clamp(v,min,max){ return Math.min(Math.max(v,min),max); }
+function fmt(x){ return Number.isFinite(x) ? x.toFixed(x >= 100 ? 1 : 2) : '—'; }
+function harmonic(n){ let sum = 0; for (let i = 1; i <= n; i++) sum += 1 / i; return sum; }
+function expectedPicks(){ return nPokemon * harmonic(nPokemon); }
+function avg(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : NaN; }
+function delayForSpeed(){
+  const mode = $('speedMode').value;
+  if (mode === 'slow') return 360;
+  if (mode === 'fast') return 60;
+  if (mode === 'instant') return 0;
+  return 150;
 }
-
-function pickPokemon() {
+function readInputs(){
+  nPokemon = clamp(parseInt($('nPokemon').value,10) || 9, 1, 151);
+  nTrials = clamp(parseInt($('nTrials').value,10) || 5, 1, 250000);
+  $('nPokemon').value = nPokemon;
+  $('nTrials').value = nTrials;
+}
+function clearTimer(){ if(timer){ clearTimeout(timer); timer = null; } }
+function resetState(keepInputs = true){
+  clearTimer();
+  if (!keepInputs) { $('nPokemon').value = 9; $('nTrials').value = 5; }
+  readInputs();
+  trialIndex = 0;
+  picks = 0;
+  totalPicks = 0;
+  collected = new Set();
+  allTrials = [];
+  pokemonCounts = Array(nSprites).fill(0);
+  recentCatch = null;
+  recentWasNew = false;
+  running = false;
+  $('startBtn').disabled = false;
+  $('statusBadge').textContent = 'Ready';
+  updateStats();
+  draw();
+}
+function startSimulation(){
+  resetState(true);
+  running = true;
+  $('startBtn').disabled = true;
+  $('statusBadge').textContent = 'Running';
+  if (nTrials > 25 || $('speedMode').value === 'instant') runFast(nTrials);
+  else stepAnimated();
+}
+function pickPokemon(){
   const c = Math.floor(Math.random() * nPokemon);
-  collected.add(c); picks++;
+  recentCatch = c;
+  recentWasNew = !collected.has(c);
+  collected.add(c);
   pokemonCounts[c]++;
+  picks++;
+  totalPicks++;
+}
+function finishTrial(){
+  allTrials.push(picks);
+  trialIndex++;
+  picks = 0;
+  collected = new Set();
+  recentCatch = null;
+  recentWasNew = false;
+}
+function stepAnimated(){
+  if (!running) return;
+  if (trialIndex >= nTrials) return finishRun();
+  if (collected.size < nPokemon) {
+    pickPokemon();
+    updateStats();
+    draw();
+    timer = setTimeout(stepAnimated, delayForSpeed());
+  } else {
+    finishTrial();
+    updateStats();
+    draw();
+    timer = setTimeout(stepAnimated, Math.max(120, delayForSpeed()));
+  }
+}
+function simulateOne(){
+  const seen = new Set();
+  let count = 0;
+  while (seen.size < nPokemon) {
+    const c = Math.floor(Math.random() * nPokemon);
+    seen.add(c);
+    pokemonCounts[c]++;
+    count++;
+  }
+  totalPicks += count;
+  return count;
+}
+function runFast(count){
+  running = true;
+  $('startBtn').disabled = true;
+  $('statusBadge').textContent = 'Crunching';
+  const chunkSize = 2500;
+  let done = 0;
+  function chunk(){
+    const stop = Math.min(count, done + chunkSize);
+    for (; done < stop; done++) {
+      allTrials.push(simulateOne());
+    }
+    trialIndex = done;
+    picks = 0;
+    collected = new Set();
+    recentCatch = null;
+    updateStats();
+    draw();
+    if (done < count) requestAnimationFrame(chunk);
+    else finishRun();
+  }
+  chunk();
+}
+function finishRun(){
+  running = false;
+  $('startBtn').disabled = false;
+  $('statusBadge').textContent = 'Complete';
+  updateStats();
+  draw();
+}
+function addFastTrials(amount){
+  readInputs();
+  for (let i = 0; i < amount; i++) allTrials.push(simulateOne());
+  trialIndex = allTrials.length;
+  updateStats();
+  draw();
+  showToast(`Added ${amount.toLocaleString()} fast trials`);
 }
 
-function drawBase() {
-  ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle = '#222'; ctx.fillRect(0, 0, width, height);
-  drawHistogram();
-  drawInfo();
-  drawPokemonSlots();
+function resizeCanvas(){
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  width = Math.max(320, Math.floor(rect.width));
+  height = Math.max(420, Math.floor(rect.height));
+  canvas.width = Math.floor(width * dpr);
+  canvas.height = Math.floor(height * dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const hRect = histCanvas.getBoundingClientRect();
+  const hw = Math.max(320, Math.floor(hRect.width));
+  const hh = Math.max(220, Math.floor(hRect.height));
+  histCanvas.width = Math.floor(hw * dpr);
+  histCanvas.height = Math.floor(hh * dpr);
+  hctx.setTransform(dpr,0,0,dpr,0,0);
+  draw();
 }
 
-function drawPokemonSlots() {
-  const margin = 20;
-  const maxSlotWidth = 80;
-  const maxColumns = 19; // <-- change to 16
-  const columns = Math.min(nPokemon, maxColumns);
-  const slotWidth = Math.min((width - 2 * margin) / columns, maxSlotWidth);
-  const rows = Math.ceil(nPokemon / columns);
+function drawRoundedRect(g,x,y,w,h,r){
+  const rr = Math.min(r,w/2,h/2);
+  g.beginPath();
+  g.moveTo(x+rr,y);
+  g.lineTo(x+w-rr,y);
+  g.quadraticCurveTo(x+w,y,x+w,y+rr);
+  g.lineTo(x+w,y+h-rr);
+  g.quadraticCurveTo(x+w,y+h,x+w-rr,y+h);
+  g.lineTo(x+rr,y+h);
+  g.quadraticCurveTo(x,y+h,x,y+h-rr);
+  g.lineTo(x,y+rr);
+  g.quadraticCurveTo(x,y,x+rr,y);
+  g.closePath();
+}
+function drawBackground(){
+  const grd = ctx.createLinearGradient(0,0,width,height);
+  grd.addColorStop(0,'#071426');
+  grd.addColorStop(.6,'#101827');
+  grd.addColorStop(1,'#21112e');
+  ctx.fillStyle = grd;
+  ctx.fillRect(0,0,width,height);
+  ctx.globalAlpha = .18;
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 1;
+  const grid = 34;
+  for(let x=0;x<width;x+=grid){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,height); ctx.stroke(); }
+  for(let y=0;y<height;y+=grid){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(width,y); ctx.stroke(); }
+  ctx.globalAlpha = 1;
+}
+function drawPokedex(){
+  const pad = 18;
+  const titleH = 42;
+  const usableW = width - pad*2;
+  const usableH = height - pad*2 - titleH;
+  const minSlot = width < 650 ? 46 : 58;
+  const maxSlot = width < 650 ? 74 : 86;
+  let columns = Math.max(1, Math.floor(usableW / minSlot));
+  columns = Math.min(columns, nPokemon);
+  let slot = Math.min(maxSlot, usableW / columns - 6);
+  let rows = Math.ceil(nPokemon / columns);
+  while (rows * (slot + 8) > usableH && slot > 32) {
+    slot -= 2;
+    columns = Math.max(1, Math.floor(usableW / (slot + 6)));
+    columns = Math.min(columns, nPokemon);
+    rows = Math.ceil(nPokemon / columns);
+  }
+  const gridW = columns * slot + (columns - 1) * 6;
+  const startX = pad + (usableW - gridW)/2;
+  const startY = pad + titleH;
 
-  for (let i = 0; i < nPokemon; i++) {
+  ctx.fillStyle = 'rgba(255,255,255,.88)';
+  ctx.font = '900 18px Inter, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`Pokédex: ${collected.size}/${nPokemon} caught`, pad, pad + 15);
+
+  const display = $('displayMode').value;
+  for(let i=0;i<nPokemon;i++){
     const row = Math.floor(i / columns);
     const col = i % columns;
-    const xPos = width - margin - (columns - col) * slotWidth;
-    const yPos = margin + row * (slotWidth + 5);
-
-    // draw slot
-    ctx.strokeStyle = 'white'; ctx.lineWidth = 2;
-    ctx.strokeRect(xPos, yPos, slotWidth, slotWidth);
-
-    // draw Pokémon if collected
-    if (collected.has(i) || (nTrials > 10 && pokemonCounts[i] > 0)) {
+    const x = startX + col * (slot + 6);
+    const y = startY + row * (slot + 8);
+    const has = display === 'counts' ? pokemonCounts[i] > 0 : collected.has(i);
+    const isRecent = recentCatch === i;
+    ctx.save();
+    ctx.shadowColor = isRecent ? (recentWasNew ? '#22c55e' : '#94a3b8') : 'transparent';
+    ctx.shadowBlur = isRecent ? 20 : 0;
+    drawRoundedRect(ctx,x,y,slot,slot,14);
+    ctx.fillStyle = has ? 'rgba(255,255,255,.12)' : 'rgba(255,255,255,.035)';
+    ctx.fill();
+    ctx.strokeStyle = isRecent ? (recentWasNew ? '#22c55e' : '#94a3b8') : (has ? 'rgba(255,203,5,.55)' : 'rgba(255,255,255,.16)');
+    ctx.lineWidth = isRecent ? 3 : 1.4;
+    ctx.stroke();
+    ctx.restore();
+    if(has){
       const img = sprites[i];
-      if (img.complete) {
-        ctx.drawImage(img, xPos, yPos, slotWidth, slotWidth);
-      }
-    }
-
-    // draw count in bottom-right corner
-    if (pokemonCounts[i] > 0) {
-      ctx.fillStyle = 'white';
-      ctx.font = `${Math.floor(slotWidth / 5)}px sans-serif`;
-      ctx.textAlign = 'right';
-      ctx.textBaseline = 'bottom';
-      ctx.fillText(pokemonCounts[i], xPos + slotWidth - 2, yPos + slotWidth - 2);
-    }
-  }
-}
-
-function drawInfo() {
-  const avg = (allTrials.reduce((a, b) => a + b, 0) + picks) / (allTrials.length + (picks > 0 ? 1 : 0));
-  const expected = nPokemon * harmonic(nPokemon);
-  const xShift = 150; // same shift as histogram
-  const yShift = 100;  // move stats up by 50 pixels
-  ctx.fillStyle = 'white'; 
-  ctx.font = '14px sans-serif';
-  ctx.fillText(`Trial: ${trialIndex + 1} / ${nTrials}`, 10 + xShift, height - 140 - yShift);
-  ctx.fillText(`Picks this trial: ${picks}`, 10 + xShift, height - 120 - yShift);
-  ctx.fillText(`Running Avg Picks: ${avg.toFixed(2)}`, 10 + xShift, height - 100 - yShift);
-  ctx.fillText(`Expected Picks: ${expected.toFixed(2)}`, 10 + xShift, height - 80 - yShift);
-  ctx.fillText(`Difference: ${(avg - expected).toFixed(2)}`, 10 + xShift, height - 60 - yShift);
-}
-
-function drawHistogram() {
-  const margin = 20;
-  const histHeight = 100;
-  const histY = height - 150;
-  const maxPick = Math.max(...allTrials, picks);
-  const bins = Math.ceil(maxPick);
-  const binWidth = (width - 2 * margin) / bins;
-  const counts = Array(bins + 1).fill(0);
-  for (let val of allTrials) counts[val]++;
-  counts[picks]++;
-  const maxCount = Math.max(...counts);
-
-  // >>> SHIFT HISTOGRAM 60 PX TO THE RIGHT <<<
-  const xShift = 60;
-
-  for (let i = 0; i < counts.length; i++) {
-    const h = counts[i] / maxCount * histHeight;
-    ctx.fillStyle = `hsl(${i / maxPick * 360},80%,60%)`;
-    ctx.fillRect(margin + xShift + i * binWidth, histY + histHeight - h, binWidth * 0.8, h);
-  }
-
-  ctx.strokeStyle = 'white';
-  ctx.beginPath();
-  ctx.moveTo(margin + xShift, histY + histHeight);
-  ctx.lineTo(width - margin + xShift, histY + histHeight);
-  ctx.moveTo(margin + xShift, histY + histHeight);
-  ctx.lineTo(margin + xShift, histY);
-  ctx.stroke();
-}
-
-let animationId = null;
-
-function animate() {
-  if (trialIndex < nTrials) {
-    if (nTrials <= 10) {
-      if (collected.size < nPokemon) {
-        pickPokemon(); drawBase();
-        setTimeout(() => { animationId = requestAnimationFrame(animate); }, 300);
+      if(img && img.complete){
+        ctx.drawImage(img, x + slot*.08, y + slot*.06, slot*.84, slot*.84);
       } else {
-        allTrials.push(picks);
-        trialIndex++; picks = 0; collected = new Set();
-        setTimeout(() => { animationId = requestAnimationFrame(animate); }, 300);
+        ctx.fillStyle = '#ffcb05';
+        ctx.font = `900 ${Math.max(12, slot*.23)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText(i+1, x+slot/2, y+slot/2);
       }
     } else {
-      for (let t = 0; t < nTrials; t++) {
-        let trialSet = new Set(), trialPicks = 0;
-        while (trialSet.size < nPokemon) { trialSet.add(Math.floor(Math.random() * nPokemon)); trialPicks++; }
-        allTrials.push(trialPicks);
-        trialSet.forEach(c => pokemonCounts[c]++);
-      }
-      trialIndex = nTrials;
-      picks = 0; collected = new Set();
-      drawBase();
+      ctx.fillStyle = 'rgba(255,255,255,.18)';
+      ctx.font = `900 ${Math.max(16, slot*.42)}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('?', x+slot/2, y+slot/2);
+    }
+    if(pokemonCounts[i] > 0){
+      const text = pokemonCounts[i] > 999 ? '999+' : String(pokemonCounts[i]);
+      ctx.fillStyle = 'rgba(15,23,42,.88)';
+      drawRoundedRect(ctx, x+slot-34, y+slot-21, 30, 17, 8);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '800 10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, x+slot-19, y+slot-12.5);
     }
   }
 }
+function drawHistogram(){
+  const rect = histCanvas.getBoundingClientRect();
+  const W = rect.width;
+  const H = rect.height;
+  hctx.clearRect(0,0,W,H);
+  const bg = hctx.createLinearGradient(0,0,W,H);
+  bg.addColorStop(0,'rgba(15,23,42,.82)');
+  bg.addColorStop(1,'rgba(30,41,59,.52)');
+  hctx.fillStyle = bg;
+  drawRoundedRect(hctx,0,0,W,H,18);
+  hctx.fill();
+  hctx.fillStyle = 'rgba(255,255,255,.88)';
+  hctx.font = '900 16px Inter, sans-serif';
+  hctx.textAlign = 'left';
+  hctx.fillText('Picks Needed Per Trial', 16, 24);
+  if(!allTrials.length){
+    hctx.fillStyle = 'rgba(255,255,255,.45)';
+    hctx.font = '800 13px sans-serif';
+    hctx.fillText('Run trials to build the distribution.', 16, 52);
+    return;
+  }
+  const min = Math.min(...allTrials);
+  const max = Math.max(...allTrials);
+  const bins = Math.min(34, Math.max(8, Math.ceil(Math.sqrt(allTrials.length))));
+  const span = Math.max(1, max - min + 1);
+  const binWidthValue = span / bins;
+  const freq = Array(bins).fill(0);
+  allTrials.forEach(v => {
+    const idx = Math.min(bins-1, Math.floor((v - min) / binWidthValue));
+    freq[idx]++;
+  });
+  const maxFreq = Math.max(...freq);
+  const left=44, right=14, top=42, bottom=34;
+  const plotW = W-left-right, plotH = H-top-bottom;
+  hctx.strokeStyle = 'rgba(255,255,255,.12)';
+  hctx.lineWidth = 1;
+  for(let i=0;i<=4;i++){
+    const y = top + plotH * i/4;
+    hctx.beginPath(); hctx.moveTo(left,y); hctx.lineTo(W-right,y); hctx.stroke();
+  }
+  const grad = hctx.createLinearGradient(left,0,W-right,0);
+  grad.addColorStop(0,'#ef4444'); grad.addColorStop(.5,'#ffcb05'); grad.addColorStop(1,'#22c55e');
+  const bw = plotW / bins;
+  freq.forEach((f,i)=>{
+    const bh = maxFreq ? f/maxFreq * plotH : 0;
+    const x = left + i*bw + 2;
+    const y = top + plotH - bh;
+    hctx.fillStyle = grad;
+    drawRoundedRect(hctx,x,y,Math.max(2,bw-4),bh,5);
+    hctx.fill();
+  });
+  hctx.fillStyle = 'rgba(255,255,255,.70)';
+  hctx.font = '800 11px sans-serif';
+  hctx.textAlign = 'center';
+  hctx.fillText(min, left, H-12);
+  hctx.fillText(Math.round((min+max)/2), left+plotW/2, H-12);
+  hctx.fillText(max, left+plotW, H-12);
+  hctx.textAlign = 'right';
+  hctx.fillText(maxFreq, left-8, top+4);
+  hctx.fillText('0', left-8, top+plotH+4);
+}
+function draw(){
+  if(!ctx || !width) return;
+  drawBackground();
+  drawPokedex();
+  drawHistogram();
+}
+function updateStats(){
+  const exp = expectedPicks();
+  const runningAvg = avg(allTrials);
+  $('trialStat').textContent = `${Math.min(trialIndex + (running ? 1 : 0), nTrials)} / ${nTrials}`;
+  $('caughtStat').textContent = `${collected.size} / ${nPokemon}`;
+  $('avgStat').textContent = allTrials.length ? fmt(runningAvg) : (picks ? fmt(picks) : '—');
+  $('expectedStat').textContent = fmt(exp);
+  $('lastStat').textContent = allTrials.length ? allTrials.at(-1) : '—';
+  $('totalPicksStat').textContent = totalPicks.toLocaleString();
+  $('progressBar').style.width = `${nPokemon ? (collected.size / nPokemon) * 100 : 0}%`;
+  const tbody = $('historyBody');
+  tbody.innerHTML = '';
+  const start = Math.max(0, allTrials.length - 75);
+  for(let i = allTrials.length - 1; i >= start; i--){
+    const tr = document.createElement('tr');
+    const diff = allTrials[i] - exp;
+    tr.innerHTML = `<td>${i+1}</td><td>${allTrials[i]}</td><td>${diff >= 0 ? '+' : ''}${fmt(diff)}</td>`;
+    tbody.appendChild(tr);
+  }
+}
+function showToast(msg){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),1600);
+}
+function savePNG(){
+  try{
+    const link = document.createElement('a');
+    link.download = 'pokemon-coupon-collector.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } catch(e){
+    showToast('Save blocked by browser because sprites are external.');
+  }
+}
 
-document.getElementById('startBtn').onclick = function () { init(); animate(); };
-document.getElementById('resetBtn').onclick = function () { init(); };
+$('startBtn').addEventListener('click', startSimulation);
+$('quickBtn').addEventListener('click', () => addFastTrials(1000));
+$('resetBtn').addEventListener('click', () => resetState(true));
+$('saveBtn').addEventListener('click', savePNG);
+['nPokemon','nTrials'].forEach(id => $(id).addEventListener('change', () => resetState(true)));
+$('displayMode').addEventListener('change', draw);
+$('speedMode').addEventListener('change', () => { if(running && nTrials > 25) return; });
+window.addEventListener('resize', resizeCanvas);
+window.addEventListener('keydown', e => {
+  if(e.key.toLowerCase() === 'r') resetState(true);
+  if(e.key === ' ') { e.preventDefault(); if(!running) startSimulation(); }
+});
+
+resetState(true);
+requestAnimationFrame(resizeCanvas);
 </script>
 </body>
 </html>
